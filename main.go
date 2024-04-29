@@ -49,18 +49,11 @@ func main() {
 	pool.SetMaxIdleConns(3)
 	pool.SetMaxOpenConns(3)
 
-	ctx, stop := context.WithCancel(context.Background())
-
 	appSignal := make(chan os.Signal, 3)
 	signal.Notify(appSignal, os.Interrupt)
 
-	go func() {
-		<-appSignal
-		stop()
-	}()
-
-	if err = pool.PingContext(ctx); err != nil {
-		log.Fatal(err, "Failed to ping DB")
+	if err = pool.Ping(); err != nil {
+		log.Fatal("Failed to ping DB: ", err)
 	}
 	fmt.Println("DB Ping successful")
 	
