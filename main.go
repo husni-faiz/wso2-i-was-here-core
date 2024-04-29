@@ -34,8 +34,6 @@ func main() {
 		Password: os.Getenv("DATABASE_PASSWORD"),
 	}
 
-	fmt.Println(os.Getenv("DATABASE_PASSWORD"))
-
 	// Opening a driver typically will not attempt to connect to the database.
 	dsn := conf.DSN() // `postgres://postgres:mysecretpassword@localhost:5432/mos?sslmode=disable`
 	pool, err = sql.Open("postgres", dsn)
@@ -45,13 +43,13 @@ func main() {
 		log.Fatal("unable to use data source name", err)
 	}
 	defer pool.Close()
+	fmt.Println("DB Connection successful")
 
 	pool.SetConnMaxLifetime(0)
 	pool.SetMaxIdleConns(3)
 	pool.SetMaxOpenConns(3)
 
 	ctx, stop := context.WithCancel(context.Background())
-	defer stop()
 
 	appSignal := make(chan os.Signal, 3)
 	signal.Notify(appSignal, os.Interrupt)
@@ -62,9 +60,10 @@ func main() {
 	}()
 
 	if err = pool.PingContext(ctx); err != nil {
-		log.Fatal(err)
+		log.Fatal(err, "Failed to ping DB")
 	}
-
+	fmt.Println("DB Ping successful")
+	
 	err = http.ListenAndServe(":3333", nil)
 	if errors.Is(err, http.ErrServerClosed) {
 		fmt.Printf("server closed\n")
