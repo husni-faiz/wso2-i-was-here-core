@@ -1,0 +1,22 @@
+openapi: 3.0.0
+info:
+  title: Web Log API
+  description: Core Service APIs.
+  version: 0.1.9
+servers:
+  - url: http://api.example.com/v1
+    description: Optional server description, e.g. Main (production) server
+  - url: http://staging-api.example.com
+    description: Optional server description, e.g. Internal staging server for testing
+paths:
+  /:
+    get:
+      summary: Returns the count of website visits.
+      responses:
+        '200':    # status code
+          description: A formatted string response with count
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: 54 Website Visit!
