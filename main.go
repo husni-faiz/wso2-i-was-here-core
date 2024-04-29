@@ -52,10 +52,10 @@ func main() {
 	appSignal := make(chan os.Signal, 3)
 	signal.Notify(appSignal, os.Interrupt)
 
-	if err = pool.Ping(); err != nil {
-		log.Fatal("Failed to ping DB: ", err)
-	}
-	fmt.Println("DB Ping successful")
+	// if err = pool.Ping(); err != nil {
+	// 	log.Fatal("Failed to ping DB: ", err)
+	// }
+	// fmt.Println("DB Ping successful")
 	
 	err = http.ListenAndServe(":3333", nil)
 	if errors.Is(err, http.ErrServerClosed) {
