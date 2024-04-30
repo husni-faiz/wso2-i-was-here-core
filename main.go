@@ -23,7 +23,8 @@ var pool *sql.DB
 
 func main() {
 	var err error
-	http.HandleFunc("/", UpdateAndView)
+	http.Handle("/", http.FileServer(http.Dir("./static")))
+	http.HandleFunc("/visit", UpdateAndView)
 	http.HandleFunc("/hello", getHello)
 
 	conf := DatabaseConfigBanking{
@@ -57,7 +58,7 @@ func main() {
 	// }
 	// fmt.Println("DB Ping successful")
 	
-	err = http.ListenAndServe(":3333", nil)
+	err = http.ListenAndServe(":80", nil)
 	if errors.Is(err, http.ErrServerClosed) {
 		fmt.Printf("server closed\n")
 	} else if err != nil {
