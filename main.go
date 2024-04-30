@@ -23,8 +23,7 @@ var pool *sql.DB
 
 func main() {
 	var err error
-	http.Handle("/", http.FileServer(http.Dir("./static")))
-	http.HandleFunc("/visit", UpdateAndView)
+	http.HandleFunc("/", UpdateAndView)
 	http.HandleFunc("/hello", getHello)
 
 	conf := DatabaseConfigBanking{
@@ -58,7 +57,7 @@ func main() {
 	// }
 	// fmt.Println("DB Ping successful")
 	
-	err = http.ListenAndServe(":80", nil)
+	err = http.ListenAndServe(":3333", nil)
 	if errors.Is(err, http.ErrServerClosed) {
 		fmt.Printf("server closed\n")
 	} else if err != nil {
@@ -154,16 +153,18 @@ type DatabaseConfigBanking struct {
 	Database string `env:"BANKING_DATABASE_NAME" envDefault:"banking"`
 	User     string `env:"DATABASE_USER" envDefault:"dev"`
 	Password string `env:"DATABASE_PASSWORD" envDefault:"none"`
+	SSLMode string  `env:"DATABASE_SSL_MODE' envDefault:"disable"`
 }
 
 func (conf DatabaseConfigBanking) DSN() string {
 	connString := fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		conf.User,
 		conf.Password,
 		conf.Host,
 		conf.Port,
 		conf.Database,
+		conf.SSLMode,
 	)
 
 	return connString
