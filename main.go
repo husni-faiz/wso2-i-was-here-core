@@ -32,6 +32,7 @@ func main() {
 		Database: os.Getenv("DATABASE_NAME"),
 		User:     os.Getenv("DATABASE_USER"),
 		Password: os.Getenv("DATABASE_PASSWORD"),
+		SSLMode:  os.Getenv("DATABASE_SSL_MODE"),
 	}
 
 	// Opening a driver typically will not attempt to connect to the database.
@@ -49,46 +50,54 @@ func main() {
 	pool.SetMaxIdleConns(3)
 	pool.SetMaxOpenConns(3)
 
-	appSignal := make(chan os.Signal, 3)
-	signal.Notify(appSignal, os.Interrupt)
-
 	if err = pool.Ping(); err != nil {
 		log.Fatal("Failed to ping DB: ", err)
 	}
 	fmt.Println("DB Ping successful")
-	
-	err = http.ListenAndServe(":3333", nil)
-	if errors.Is(err, http.ErrServerClosed) {
-		fmt.Printf("server closed\n")
-	} else if err != nil {
-		fmt.Printf("error starting server: %s\n", err)
-		os.Exit(1)
+
+	server := &http.Server{
+		Addr: ":3333",
 	}
+	go func() {
+		err = server.ListenAndServe()
+		if errors.Is(err, http.ErrServerClosed) {
+			fmt.Printf("server closed\n")
+		} else if err != nil {
+			fmt.Printf("error starting server: %s\n", err)
+			os.Exit(1)
+		}
+	}()
+
+	appSignal := make(chan os.Signal, 3)
+	signal.Notify(appSignal, os.Interrupt)
+
+	<-appSignal
+	server.Close()
 }
 
 func UpdateAndView(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-        http.NotFound(w, r)
-        return
-    }
+	// if r.URL.Path != "/" {
+	//     http.NotFound(w, r)
+	//     return
+	// }
 	err := Count()
 	if err != nil {
 		io.WriteString(w, Wrap(err, "Error counting").Error())
 	} else {
-	count, err := GetCount()
-	fmt.Printf("got / request\n")
-	if err != nil {
-		io.WriteString(w, Wrap(err, "Error fetching data").Error())
-	} else {
-		result := make(map[string]int)
-    	result["count"] = count
-		jsonResult, err:= json.MarshalIndent(result, "", "  ")
+		count, err := GetCount()
+		fmt.Printf("got / request\n")
 		if err != nil {
-			io.WriteString(w, "error encoding response to json")
+			io.WriteString(w, Wrap(err, "Error fetching data").Error())
 		} else {
-			io.WriteString(w, string(jsonResult))
+			result := make(map[string]int)
+			result["count"] = count
+			jsonResult, err := json.MarshalIndent(result, "", "  ")
+			if err != nil {
+				io.WriteString(w, "error encoding response to json")
+			} else {
+				io.WriteString(w, string(jsonResult))
+			}
 		}
-	}
 	}
 }
 
@@ -116,36 +125,35 @@ func GetCount() (int, error) {
 	return count.(int), err
 }
 
-
 func getCount(transaction *sql.DB, table string) (interface{}, error) {
-		// Insert
-		fetchQuery :=
-			fmt.Sprintf(`SELECT id FROM %q ORDER BY createdAt DESC LIMIT 1;`, MetricTable)
-		rows, err := pool.Query(fetchQuery)
-		if err != nil {
-			return nil, Wrap(err, "failed to execute insert data statement")
-		}
-		defer rows.Close()
-	
-		var count int
-		rw := rows.Next()
-		if rw {
+	// Insert
+	fetchQuery :=
+		fmt.Sprintf(`SELECT id FROM %q ORDER BY createdAt DESC LIMIT 1;`, MetricTable)
+	rows, err := pool.Query(fetchQuery)
+	if err != nil {
+		return nil, Wrap(err, "failed to execute insert data statement")
+	}
+	defer rows.Close()
+
+	var count int
+	rw := rows.Next()
+	if rw {
 		err = rows.Scan(&count)
-		return count, err 
-		}
-		return nil, errors.New("no data found")
+		return count, err
+	}
+	return nil, errors.New("no data found")
 }
 
 func setCount(transaction *sql.Tx, table string, value interface{}) error {
-		// Insert
-		insertQuery :=
-			fmt.Sprintf(`INSERT INTO %q(data, meta) VALUES($1, $2);`, table)
-		_, err := execQuery(transaction, insertQuery, value, value)
-		if err != nil {
-			return Wrap(err, "failed to execute insert data statement")
-		}
-	
-		return nil
+	// Insert
+	insertQuery :=
+		fmt.Sprintf(`INSERT INTO %q(data, meta) VALUES($1, $2);`, table)
+	_, err := execQuery(transaction, insertQuery, value, value)
+	if err != nil {
+		return Wrap(err, "failed to execute insert data statement")
+	}
+
+	return nil
 }
 
 func getHello(w http.ResponseWriter, r *http.Request) {
@@ -200,8 +208,8 @@ func Wrap(err error, msg string) error {
 }
 
 type MetricData struct {
-	Id *int
+	Id        *int
 	CreatedAt string
-	Data interface{}
-	Meta interface{}
+	Data      interface{}
+	Meta      interface{}
 }
