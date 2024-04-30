@@ -14,9 +14,10 @@ paths:
       summary: Returns the count of website visits.
       responses:
         '200':    # status code
-          description: A formatted string response with count
+          description: Count of website visits
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-                example: 54 Website Visit!
+                type : integer
+                format: int64
+                example: 54

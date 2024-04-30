@@ -23,7 +23,7 @@ var pool *sql.DB
 
 func main() {
 	var err error
-	http.HandleFunc("/", UpdateAndView)
+	http.HandleFunc("/visit", UpdateAndView)
 	http.HandleFunc("/hello", getHello)
 
 	conf := DatabaseConfigBanking{
@@ -80,7 +80,14 @@ func UpdateAndView(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		io.WriteString(w, Wrap(err, "Error fetching data").Error())
 	} else {
-		io.WriteString(w, fmt.Sprintf("%d Website Visit!\n", count))
+		result := make(map[string]int)
+    	result["count"] = count
+		jsonResult, err:= json.MarshalIndent(result, "", "  ")
+		if err != nil {
+			io.WriteString(w, "error encoding response to json")
+		} else {
+			io.WriteString(w, string(jsonResult))
+		}
 	}
 	}
 }
